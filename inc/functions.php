@@ -4792,7 +4792,6 @@ function build_profile_link($username="", $uid=0, $target="", $onclick="")
 		{
 			$ret = "<a href=\"{$mybb->settings['bburl']}/".get_profile_link($uid)."\"{$target}{$onclick}>{$str}</a>";
 		}
-		//$cache->update("code_functions.php=".$md, $ret, 3600*6, true);
 		return $ret;
 	}
 }
