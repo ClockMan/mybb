@@ -9,6 +9,8 @@
  * $Id$
  */
 
+  $g_cached_users = array();
+
 /**
  * Outputs a page directly to the browser, parsing anything which needs to be parsed.
  *
@@ -4756,7 +4758,7 @@ function get_announcement_link($aid=0)
  */
 function build_profile_link($username="", $uid=0, $target="", $onclick="")
 {
-	global $mybb, $lang, $db, $cache;
+	global $mybb, $lang, $g_cached_users;
 
 	if(!$username && $uid == 0)
 	{
@@ -4781,18 +4783,23 @@ function build_profile_link($username="", $uid=0, $target="", $onclick="")
 			$onclick = " onclick=\"{$onclick}\"";
 		}
 		
-		
-		$q = $db->fetch_array($db->simple_select("users", "username, usergroup, displaygroup", "uid='{$uid}'", array("limit" => 1)));
-		$str = format_name($q['username'], $q['usergroup'], $q['displaygroup']);
-		if (strpos($username, $q['username']) === false)
+		if (!isset($g_cached_users[$uid]))
 		{
-			$ret = "<a href=\"{$mybb->settings['bburl']}/".get_profile_link($uid)."\"{$target}{$onclick}>{$username}</a>";
+			$q = $db->fetch_array($db->simple_select("users", "username, usergroup, displaygroup", "uid='{$uid}'", array("limit" => 1)));
+			$str = format_name($q['username'], $q['usergroup'], $q['displaygroup']);
+			if (strpos($username, $q['username']) === false)
+			{
+				$q['link'] = "<a href=\"{$mybb->settings['bburl']}/".get_profile_link($uid)."\"{$target}{$onclick}>{$username}</a>";
+			} else {
+				$q['link'] = "<a href=\"{$mybb->settings['bburl']}/".get_profile_link($uid)."\"{$target}{$onclick}>{$str}</a>";
+			}
+			$q['uid'] = $uid;
+			$q['link'] = $ret;
+			$g_cached_users[$uid] = $q;
+			return $q['link'];
 		}
-		else
-		{
-			$ret = "<a href=\"{$mybb->settings['bburl']}/".get_profile_link($uid)."\"{$target}{$onclick}>{$str}</a>";
-		}
-		return $ret;
+		else 
+			return $g_cached_users[$uid]['link'];
 	}
 }
 
