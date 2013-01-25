@@ -114,12 +114,16 @@ class memcacheCacheHandler
 	 * Write an item to the cache.
 	 *
 	 * @param string The name of the cache
-	 * @param mixed The data to write to the cache item
+	 * @param contents The data to write to the cache item
+	 * @param time Time in seconds - how long cache, 0 - cache with no limit, default
 	 * @return boolean True on success, false on failure
 	 */
-	function put($name, $contents)
+	function put($name, $contents, $time = 0 )
 	{
-		return $this->memcache->set($this->unique_id."_".$name, $contents, MEMCACHE_COMPRESSED);
+		if (intval($time) <= 0)
+			return $this->memcache->set($this->unique_id."_".$name, $contents, MEMCACHE_COMPRESSED);
+		else
+			return $this->memcache->set($this->unique_id."_".$name, $contents, MEMCACHE_COMPRESSED, intval($time));
 	}
 	
 	/**

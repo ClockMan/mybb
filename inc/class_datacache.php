@@ -6,7 +6,7 @@
  * Website: http://mybb.com
  * License: http://mybb.com/about/license
  *
- * $Id$
+ * $Id: class_datacache.php 5473 2011-06-23 11:12:10Z Tomm $
  */
 
 class datacache
@@ -92,10 +92,9 @@ class datacache
 	 * @param boolean If true, cannot be overwritten during script execution.
 	 * @return unknown
 	 */
-	function read($name, $hard=false)
+	function read($name, $hard=false, $memonly = false)
 	{
 		global $db, $mybb;
-
 		// Already have this cache and we're not doing a hard refresh? Return cached copy
 		if(isset($this->cache[$name]) && $hard == false)
 		{
@@ -107,50 +106,43 @@ class datacache
 		{
 			return false;
 		}
-
+		
+		debug_time_start('MEM_READ='.$name.','.($hard?'HARD ':''), ($memonly?'MEM ':''));
 		if(is_object($this->handler))
 		{
 			$data = $this->handler->fetch($name);
-
-			// No data returned - cache gone bad?
-			if($data === false)
+			if  (false !== $data)
 			{
-				// Fetch from database
-				$query = $db->simple_select("datacache", "title,cache", "title='".$db->escape_string($name)."'");
-				$cache_data = $db->fetch_array($query);
-				$data = @unserialize($cache_data['cache']);
-
-				// Update cache for handler
-				$this->handler->put($name, $data);
+                $this->cache[$name] = $data;
+				debug_time_stop('Handler cache');
+               	return $data;
 			}
 		}
 		// Else, using internal database cache
-		else
+		if (!$memonly)
 		{
-			$query = $db->simple_select("datacache", "title,cache", "title='$name'");
+			$query = $db->simple_select("datacache", "title,cache", "title='".$db->escape_string($name)."'");
 			$cache_data = $db->fetch_array($query);
-
 			if(!$cache_data['title'])
 			{
-				$data = false;
+				 debug_time_stop('False - database');
+			     return false;
 			}
 			else
 			{
 				$data = @unserialize($cache_data['cache']);
+				$this->cache[$name] = $data;
+				if((is_object($this->handler)) && ("memcache" == $mybb->config['cache_store']) )
+				{
+					  $this->handler->put($name, $data, 1800);
+				}
+				debug_time_stop('Database cache');
+				return $data;
 			}
 		}
+		debug_time_stop('False - default');
+		return false;
 
-		// Cache locally
-		$this->cache[$name] = $data;
-		
-		if($data !== false)
-		{
-			return $data;
-		}
-		else
-		{
-			return false;
-		}
 	}
 
 	/**
@@ -159,26 +151,34 @@ class datacache
 	 * @param string The cache content identifier.
 	 * @param string The cache content.
 	 */
-	function update($name, $contents)
+	function update($name, $contents, $t = 2073600, $memonly = false)
 	{
 		global $db, $mybb;
-		
+		debug_time_start('MEM_WRITE='.$name.','.$t, ($memonly?'MEM ':''));
 		$this->cache[$name] = $contents;
+		if (false == $memonly)
+		{
+			$dbcontents = $db->escape_string(serialize($contents));
+			$replace_array = array(
+				"title" => $db->escape_string($name),
+				"cache" => $dbcontents
+			);		
+			$db->replace_query("datacache", $replace_array, "", false);
+		}
 
-		// We ALWAYS keep a running copy in the db just incase we need it
-		$dbcontents = $db->escape_string(serialize($contents));
-		
-		$replace_array = array(
-			"title" => $db->escape_string($name),
-			"cache" => $dbcontents
-		);		
-		$db->replace_query("datacache", $replace_array, "", false);
 
 		// Do we have a cache handler we're using?
 		if(is_object($this->handler))
 		{
-			$this->handler->put($name, $contents);
+			if ("memcache" == $mybb->config['cache_store']) {
+				$this->handler->put($name, $contents, $t);
+			}
+			else
+			{
+				$this->handler->put($name, $contents);
+			}
 		}
+		debug_time_stop("Write");
 	}
 	
 	/**

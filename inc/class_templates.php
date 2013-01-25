@@ -6,7 +6,7 @@
  * Website: http://mybb.com
  * License: http://mybb.com/about/license
  *
- * $Id$
+ * $Id: class_templates.php 5297 2010-12-28 22:01:14Z Tomm $
  */
 
 class templates
@@ -39,18 +39,27 @@ class templates
 	 */
 	function cache($templates)
 	{
-		global $db, $theme;
+		global $db, $theme, $cache;
 		$sql = $sqladd = "";
 		$names = explode(",", $templates);
 		foreach($names as $key => $title)
 		{
 			$sql .= " ,'".trim($title)."'";
 		}
-
-		$query = $db->simple_select("templates", "title,template", "title IN (''$sql) AND sid IN ('-2','-1','".$theme['templateset']."')", array('order_by' => 'sid', 'order_dir' => 'asc'));
-		while($template = $db->fetch_array($query))
+		$tmp = "code_class_templates.php=".md5($sql);
+		$c = $cache->read($tmp);
+		if (false === $c)
 		{
-			$this->cache[$template['title']] = $template['template'];
+			$query = $db->simple_select("templates", "title,template", "title IN (''$sql) AND sid IN ('-2','-1','".$theme['templateset']."')", array('order_by' => 'sid', 'order_dir' => 'asc'));
+			while($template = $db->fetch_array($query))
+			{
+				$this->cache[$template['title']] = $template['template'];
+			}
+			$cache->update($tmp, $this->cache, 3600, true);
+		}
+		else
+		{
+			$this->cache = $c;
 		}
 	}
 

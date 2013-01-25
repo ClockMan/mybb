@@ -6,7 +6,7 @@
  * Website: http://mybb.com
  * License: http://mybb.com/about/license
  *
- * $Id$
+ * $Id: class_parser.php 5710 2011-12-08 14:51:56Z Tomm $
  */
 
 /*
@@ -21,6 +21,8 @@ options = array(
 	highlight
 )
 */
+if (!defined('POSTPARSER')) {
+define('POSTPARSER', 1);
 
 class postParser
 {
@@ -125,9 +127,15 @@ class postParser
 		// If MyCode needs to be replaced, first filter out [code] and [php] tags.
 		if($this->options['allow_mycode'])
 		{
-			preg_match_all("#\[(code|php)\](.*?)\[/\\1\](\r\n?|\n?)#si", $message, $code_matches, PREG_SET_ORDER);
+			preg_match_all("#\[(code|php|strip)\](.*?)\[/\\1\](\r\n?|\n?)#si", $message, $code_matches, PREG_SET_ORDER);
 			$message = preg_replace("#\[(code|php)\](.*?)\[/\\1\](\r\n?|\n?)#si", "<mybb-code>\n", $message);
-		}
+		
+
+ $message = preg_replace("#\[(strip)\](.*?)\[/\\1\](\r\n?|\n?)#si", "<mybb-strip>\n", $message);
+
+}
+
+
 
 		// Always fix bad Javascript in the message.
 		$message = $this->fix_javascript($message);
@@ -178,12 +186,32 @@ class postParser
 					if(my_strtolower($text[1]) == "code")
 					{
 						$code = $this->mycode_parse_code($text[2]);
+                                                $message = preg_replace("#\<mybb-code>\n?#", $code, $message, 1);
 					}
 					elseif(my_strtolower($text[1]) == "php")
 					{
 						$code = $this->mycode_parse_php($text[2]);
-					}
-					$message = preg_replace("#\<mybb-code>\n?#", $code, $message, 1);
+                                                $message = preg_replace("#\<mybb-code>\n?#", $code, $message, 1)
+;					} elseif(my_strtolower($text[1]) == "strip")
+{
+  $code = $text[2];
+  $ret = "";
+  do
+  {
+    $code = strstr($code, "&lt;!-- message --&gt;");
+    $pos = strpos($code, "&lt;!-- / message --&gt;");
+    if ($pos === false)
+    {
+       break;
+    }
+    $ret.="<p>".substr($code, 22, $pos-1-22)."</p>";
+    $code = strstr($code, "&lt;!-- / message --&gt;");
+ 
+  } while ($code !== false);
+  $message = preg_replace("#\<mybb-strip>\n?#", $ret, $message, 1);
+
+}
+					
 				}
 			}
 		}
@@ -1186,5 +1214,6 @@ class postParser
 		
 		return $message;
 	}
+}
 }
 ?>
