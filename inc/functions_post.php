@@ -23,6 +23,7 @@ function build_postbit($post, $post_type=0)
 	global $lang, $ismod, $inlinecookie, $inlinecount, $groupscache, $fid;
 	global $plugins, $parser, $cache, $ignored_users, $hascustomtitle;
 	
+	debug_time_start('POST-'.$post['pid']);
 	$hascustomtitle = 0;
 
 	// Set up the message parser if it doesn't already exist.
@@ -645,7 +646,7 @@ function build_postbit($post, $post_type=0)
 		eval("\$postbit = \"".$templates->get("postbit")."\";");		
 	}
 	$GLOBALS['post'] = "";
-	
+	debug_time_stop('GENERATED');
 	return $postbit;
 }
 
