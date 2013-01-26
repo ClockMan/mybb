@@ -4794,7 +4794,6 @@ function build_profile_link($username="", $uid=0, $target="", $onclick="")
 				$q['link'] = "<a href=\"{$mybb->settings['bburl']}/".get_profile_link($uid)."\"{$target}{$onclick}>{$str}</a>";
 			}
 			$q['uid'] = $uid;
-			$q['link'] = $ret;
 			$g_cached_users[$uid] = $q;
 			return $q['link'];
 		}
