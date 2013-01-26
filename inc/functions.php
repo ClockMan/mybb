@@ -4676,7 +4676,7 @@ function get_announcement_link($aid=0)
  */
 function build_profile_link($username="", $uid=0, $target="", $onclick="")
 {
-	global $mybb, $lang, $g_cached_users;
+	global $mybb, $lang, $db, $g_cached_users;
 
 	if(!$username && $uid == 0)
 	{
