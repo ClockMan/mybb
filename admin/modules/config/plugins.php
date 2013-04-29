@@ -42,6 +42,8 @@ if($mybb->input['action'] == "browse")
 		'description' => $lang->browse_plugins_desc
 	);
 	
+	$plugins->run_hooks_by_ref("admin_config_plugins_tabs", $sub_tabs);
+	
 	$page->output_nav_tabs($sub_tabs, 'browse_plugins');
 	
 	// Process search requests
@@ -85,7 +87,7 @@ if($mybb->input['action'] == "browse")
 	$table = new Table;
 	$table->construct_header($lang->plugin);
 	$table->construct_header($lang->latest_version, array("class" => "align_center", 'width' => 125));
-	$table->construct_header($lang->controls, array("class" => "align_center", 'width' => 125));
+	$table->construct_header($lang->controls, array("class" => "align_center", 'width' => 125, "colspan" => 2));
 	
 	$parser = new XMLParser($contents);
 	$tree = $parser->get_tree();
@@ -111,6 +113,7 @@ if($mybb->input['action'] == "browse")
 			$table->construct_cell("<strong>{$result['name']['value']}</strong><br /><small>{$result['description']['value']}</small><br /><i><small>{$lang->created_by} {$result['author']['value']}</small></i>");
 			$table->construct_cell($result['version']['value'], array("class" => "align_center"));
 			$table->construct_cell("<strong><a href=\"http://mods.mybb.com/view/{$result['download_url']['value']}\" target=\"_blank\">{$lang->download}</a></strong>", array("class" => "align_center"));
+			$plugins->run_hooks("admin_config_plugins_browse_plugins_plugin", $table);
 			$table->construct_row();
 		}
 	}
@@ -266,7 +269,7 @@ if($mybb->input['action'] == "check")
 	$table->construct_header($lang->plugin);
 	$table->construct_header($lang->your_version, array("class" => "align_center", 'width' => 125));
 	$table->construct_header($lang->latest_version, array("class" => "align_center", 'width' => 125));
-	$table->construct_header($lang->controls, array("class" => "align_center", 'width' => 125));
+	$table->construct_header($lang->controls, array("class" => "align_center", 'width' => 125, "colspan" => 2));
 	
 	if(!is_array($tree['plugins']['plugin']))
 	{
@@ -289,6 +292,7 @@ if($mybb->input['action'] == "check")
 			$table->construct_cell("{$names[$plugin['attributes']['guid']]['version']}", array("class" => "align_center"));
 			$table->construct_cell("<strong><span style=\"color: #C00\">{$plugin['version']['value']}</span></strong>", array("class" => "align_center"));
 			$table->construct_cell("<strong><a href=\"http://mods.mybb.com/view/{$plugin['download_url']['value']}\" target=\"_blank\">{$lang->download}</a></strong>", array("class" => "align_center"));
+			$plugins->run_hooks("admin_config_plugins_plugin_updates_plugin", $table);
 			$table->construct_row();
 		}
 	}
@@ -319,6 +323,8 @@ if($mybb->input['action'] == "check")
 		'link' => "index.php?module=config-plugins&amp;action=browse",
 		'description' => $lang->browse_plugins_desc
 	);
+	
+	$plugins->run_hooks_by_ref("admin_config_plugins_tabs", $sub_tabs);
 	
 	$page->output_nav_tabs($sub_tabs, 'update_plugins');
 	
@@ -457,6 +463,8 @@ if(!$mybb->input['action'])
 		'description' => $lang->browse_plugins_desc
 	);
 	
+	$plugins->run_hooks_by_ref("admin_config_plugins_tabs", $sub_tabs);
+	
 	$page->output_nav_tabs($sub_tabs, 'plugins');
 	
 	$plugins_cache = $cache->read("plugins");
@@ -468,7 +476,7 @@ if(!$mybb->input['action'])
 
 	$table = new Table;
 	$table->construct_header($lang->plugin);
-	$table->construct_header($lang->controls, array("colspan" => 2, "class" => "align_center", "width" => 300));
+	$table->construct_header($lang->controls, array("colspan" => 4, "class" => "align_center", "width" => 300));
 	
 	if(!empty($plugins_list))
 	{
@@ -565,6 +573,9 @@ if(!$mybb->input['action'])
 					$table->construct_cell("&nbsp;", array("class" => "align_center", "width" => 150));
 				}
 			}
+			
+			$plugins->run_hooks("admin_config_plugins_plugin_list_plugin", $table);
+			
 			$table->construct_row();
 		}
 	}

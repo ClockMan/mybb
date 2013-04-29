@@ -661,6 +661,8 @@ class DefaultForm
 			$no_value = "no";
 		}
 		// Set the options straight
+		if (!isset($yes_options['class'])) $yes_options['class'] = "";
+		if (!isset($no_options['class'])) $no_options['class'] = "";
 		$yes_options['class'] = "radio_yes ".$yes_options['class'];
 		$yes_options['checked'] = $yes_checked;
 		$no_options['class'] = "radio_no ".$no_options['class'];

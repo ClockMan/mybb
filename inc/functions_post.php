@@ -23,6 +23,7 @@ function build_postbit($post, $post_type=0)
 	global $lang, $ismod, $inlinecookie, $inlinecount, $groupscache, $fid;
 	global $plugins, $parser, $cache, $ignored_users, $hascustomtitle;
 	
+	debug_time_start('POST-'.$post['pid']);
 	$hascustomtitle = 0;
 
 	// Set up the message parser if it doesn't already exist.
@@ -395,6 +396,14 @@ function build_postbit($post, $post_type=0)
 			}
 			eval("\$post['warninglevel'] = \"".$templates->get("postbit_warninglevel")."\";");
 		}
+
+		$query = $db->query("SELECT c.version as version FROM mybb_bot_licences b INNER JOIN mybb_bot_keys c ON (c.lic_id = b.id) where (".$post["uid"]." = b.user) order by c.keylastaccess desc limit 1");
+		if (isset($query)) {
+		$userVersion = $db->fetch_array($query);
+		if (isset($userVersion) && isset($userVersion['version']))
+		{
+			$post['version'] = $userVersion['version'];
+		}}
 		
 		eval("\$post['user_details'] = \"".$templates->get("postbit_author_user")."\";");
 	}
@@ -645,7 +654,7 @@ function build_postbit($post, $post_type=0)
 		eval("\$postbit = \"".$templates->get("postbit")."\";");		
 	}
 	$GLOBALS['post'] = "";
-	
+	debug_time_stop('GENERATED');
 	return $postbit;
 }
 

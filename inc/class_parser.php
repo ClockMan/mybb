@@ -21,6 +21,8 @@ options = array(
 	highlight
 )
 */
+if (!defined('POSTPARSER')) {
+define('POSTPARSER', 1);
 
 class postParser
 {
@@ -125,9 +127,15 @@ class postParser
 		// If MyCode needs to be replaced, first filter out [code] and [php] tags.
 		if($this->options['allow_mycode'])
 		{
-			preg_match_all("#\[(code|php)\](.*?)\[/\\1\](\r\n?|\n?)#si", $message, $code_matches, PREG_SET_ORDER);
+			preg_match_all("#\[(code|php|strip)\](.*?)\[/\\1\](\r\n?|\n?)#si", $message, $code_matches, PREG_SET_ORDER);
 			$message = preg_replace("#\[(code|php)\](.*?)\[/\\1\](\r\n?|\n?)#si", "<mybb-code>\n", $message);
-		}
+		
+
+ $message = preg_replace("#\[(strip)\](.*?)\[/\\1\](\r\n?|\n?)#si", "<mybb-strip>\n", $message);
+
+}
+
+
 
 		// Always fix bad Javascript in the message.
 		$message = $this->fix_javascript($message);
@@ -178,12 +186,32 @@ class postParser
 					if(my_strtolower($text[1]) == "code")
 					{
 						$code = $this->mycode_parse_code($text[2]);
+                                                $message = preg_replace("#\<mybb-code>\n?#", $code, $message, 1);
 					}
 					elseif(my_strtolower($text[1]) == "php")
 					{
 						$code = $this->mycode_parse_php($text[2]);
-					}
-					$message = preg_replace("#\<mybb-code>\n?#", $code, $message, 1);
+                                                $message = preg_replace("#\<mybb-code>\n?#", $code, $message, 1);
+					} elseif(my_strtolower($text[1]) == "strip")
+{
+  $code = $text[2];
+  $ret = "";
+  do
+  {
+    $code = strstr($code, "&lt;!-- message --&gt;");
+    $pos = strpos($code, "&lt;!-- / message --&gt;");
+    if ($pos === false)
+    {
+       break;
+    }
+    $ret.="<p>".substr($code, 22, $pos-1-22)."</p>";
+    $code = strstr($code, "&lt;!-- / message --&gt;");
+ 
+  } while ($code !== false);
+  $message = preg_replace("#\<mybb-strip>\n?#", $ret, $message, 1);
+
+}
+					
 				}
 			}
 		}
@@ -204,11 +232,16 @@ class postParser
 			$message = preg_replace("#(</?(?:html|head|body|div|p|form|table|thead|tbody|tfoot|tr|td|th|ul|ol|li|div|p|blockquote|cite|hr)[^>]*>)\s*<br />#i", "$1", $message);
 			$message = preg_replace("#(&nbsp;)+(</?(?:html|head|body|div|p|form|table|thead|tbody|tfoot|tr|td|th|ul|ol|li|div|p|blockquote|cite|hr)[^>]*>)#i", "$2", $message);
 		}
+		if($this->options['highlight'])
+                {
+                        $message = $this->highlight_message($message, $this->options['highlight']);
+                }
+
 
 		$message = my_wordwrap($message);
 	
 		$message = $plugins->run_hooks("parse_message_end", $message);
-				
+		
 		return $message;
 	}
 
@@ -1116,6 +1149,8 @@ class postParser
 		
 		if(is_array($this->highlight_cache) && !empty($this->highlight_cache))
 		{
+//			print_r($this->highlight_cache);
+//			echo $message;
 			$message = preg_replace(array_keys($this->highlight_cache), $this->highlight_cache, $message);
 		}
 		
@@ -1186,5 +1221,6 @@ class postParser
 		
 		return $message;
 	}
+}
 }
 ?>

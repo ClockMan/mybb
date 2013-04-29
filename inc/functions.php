@@ -8,7 +8,7 @@
  *
  * $Id$
  */
- 
+
   $g_cached_users = array();
 
 /**
@@ -859,6 +859,15 @@ function redirect($url, $message="", $title="")
  */
 function multipage($count, $perpage, $page, $url, $breadcrumb=false)
 {
+/* + PL:google_seo + */ if(function_exists("google_seo_url_multipage"))
+/* + PL:google_seo + */ {
+/* + PL:google_seo + */     $newurl = google_seo_url_multipage($url);
+/* + PL:google_seo + */ 
+/* + PL:google_seo + */     if($newurl)
+/* + PL:google_seo + */     {
+/* + PL:google_seo + */         $url = $newurl;
+/* + PL:google_seo + */     }
+/* + PL:google_seo + */ }
 	global $theme, $templates, $lang, $mybb;
 
 	if($count <= $perpage)
@@ -3405,12 +3414,41 @@ function build_archive_link($type, $id="")
 	return $url;
 }
 
+$debug_items = array();
+$debug_time = 0;
+$debug_string = "";
+
+function debug_time_stop($string)
+{
+	global $debug_items, $debug_time, $mybb, $debug_string;
+	if((!$mybb->debug_mode) || (0 == $debug_time)) return;
+	$tmp = array();
+	$tmp["title"] = $debug_string.' -=- '.$string;
+	$tmp["time"] = microtime(true)-$debug_time; 
+	$debug_items[] = $tmp;
+	$debug_time = 0;
+	$debug_string = '';
+}
+
+function debug_time_start($string)
+{
+	global $debug_time, $mybb, $debug_string;
+	if(!$mybb->debug_mode) return;
+	
+	if ($debug_time!=0)
+	{
+		debug_time_stop("BREAK - new timer started");
+	}
+	$debug_time = microtime(true);
+	$debug_string = $string;
+}
+
 /**
  * Prints a debug information page
  */
 function debug_page()
 {
-	global $db, $debug, $templates, $templatelist, $mybb, $maintimer, $globaltime, $ptimer, $parsetime;
+	global $db, $debug, $templates, $templatelist,$debug_items, $mybb, $maintimer, $globaltime, $ptimer, $parsetime;
 
 	$totaltime = $maintimer->totaltime;
 	$phptime = $maintimer->format($maintimer->totaltime - $db->query_time);
@@ -3488,6 +3526,23 @@ function debug_page()
 	}
 
 	echo "</table>\n";
+
+	if (count($debug_items)>0)
+	{
+		$float = 0.0;
+		for($i =0; $i<count($debug_items);++$i)
+		{
+			$float+=$debug_items[$i]["time"];
+		}
+		echo "<h2>Debug entrys (".count($debug_items)." Total [".number_format($float,16)."]) </h2>\n";
+		echo "<table width=\"95%\" cellpadding=\"4\" cellspacing=\"1\" align=\"center\">\n";
+		for($i =0; $i<count($debug_items);++$i)
+		{
+			echo '<tr><td>'.number_format($debug_items[$i]["time"],16).'</td><td>'.$debug_items[$i]["title"].'</td></tr>';
+		}
+		echo "</table>\n";
+		echo "<br />\n";
+	}
 
 	echo "<h2>Database Connections (".count($db->connections)." Total) </h2>\n";
 	echo "<table style=\"background-color: #666;\" width=\"95%\" cellpadding=\"4\" cellspacing=\"1\" align=\"center\">\n";
@@ -3877,6 +3932,12 @@ function leave_usergroup($uid, $leavegroup)
  */
 function get_current_location($fields=false, $ignore=array())
 {
+/* + PL:google_seo + */ global $mybb, $google_seo_location;
+/* + PL:google_seo + */ 
+/* + PL:google_seo + */ if($google_seo_location && !$fields)
+/* + PL:google_seo + */ {
+/* + PL:google_seo + */     return $google_seo_location;
+/* + PL:google_seo + */ }
 	if(defined("MYBB_LOCATION"))
 	{
 		return MYBB_LOCATION;
@@ -4447,6 +4508,8 @@ function my_strlen($string)
     return $string_length;
 }
 
+$is_mb_substr=function_exists("mb_substr");
+
 /**
  * Cuts a string at a specified point, mb strings accounted for
  *
@@ -4458,11 +4521,12 @@ function my_strlen($string)
  */
 function my_substr($string, $start, $length="", $handle_entities = false)
 {
+    global $is_mb_substr;
 	if($handle_entities)
 	{
 		$string = unhtmlentities($string);
 	}
-	if(function_exists("mb_substr"))
+	if($is_mb_substr)
 	{
 		if($length != "")
 		{
@@ -4649,6 +4713,15 @@ function get_event_date($event)
  */
 function get_profile_link($uid=0)
 {
+/* + PL:google_seo + */ if(function_exists("google_seo_url_profile"))
+/* + PL:google_seo + */ {
+/* + PL:google_seo + */     $link = google_seo_url_profile($uid);
+/* + PL:google_seo + */ 
+/* + PL:google_seo + */     if($link)
+/* + PL:google_seo + */     {
+/* + PL:google_seo + */         return $link;
+/* + PL:google_seo + */     }
+/* + PL:google_seo + */ }
 	$link = str_replace("{uid}", $uid, PROFILE_URL);
 	return htmlspecialchars_uni($link);
 }
@@ -4661,6 +4734,15 @@ function get_profile_link($uid=0)
  */
 function get_announcement_link($aid=0)
 {
+/* + PL:google_seo + */ if(function_exists("google_seo_url_announcement"))
+/* + PL:google_seo + */ {
+/* + PL:google_seo + */     $link = google_seo_url_announcement($aid);
+/* + PL:google_seo + */ 
+/* + PL:google_seo + */     if($link)
+/* + PL:google_seo + */     {
+/* + PL:google_seo + */         return $link;
+/* + PL:google_seo + */     }
+/* + PL:google_seo + */ }
 	$link = str_replace("{aid}", $aid, ANNOUNCEMENT_URL);
 	return htmlspecialchars_uni($link);
 }
@@ -4712,7 +4794,6 @@ function build_profile_link($username="", $uid=0, $target="", $onclick="")
 				$q['link'] = "<a href=\"{$mybb->settings['bburl']}/".get_profile_link($uid)."\"{$target}{$onclick}>{$str}</a>";
 			}
 			$q['uid'] = $uid;
-			$q['link'] = $ret;
 			$g_cached_users[$uid] = $q;
 			return $q['link'];
 		}
@@ -4730,6 +4811,15 @@ function build_profile_link($username="", $uid=0, $target="", $onclick="")
  */
 function get_forum_link($fid, $page=0)
 {
+/* + PL:google_seo + */ if(function_exists("google_seo_url_forum"))
+/* + PL:google_seo + */ {
+/* + PL:google_seo + */     $link = google_seo_url_forum($fid, $page);
+/* + PL:google_seo + */ 
+/* + PL:google_seo + */     if($link)
+/* + PL:google_seo + */     {
+/* + PL:google_seo + */         return $link;
+/* + PL:google_seo + */     }
+/* + PL:google_seo + */ }
 	if($page > 0)
 	{
 		$link = str_replace("{fid}", $fid, FORUM_URL_PAGED);
@@ -4753,6 +4843,15 @@ function get_forum_link($fid, $page=0)
  */
 function get_thread_link($tid, $page=0, $action='')
 {
+/* + PL:google_seo + */ if(function_exists("google_seo_url_thread"))
+/* + PL:google_seo + */ {
+/* + PL:google_seo + */     $link = google_seo_url_thread($tid, $page, $action);
+/* + PL:google_seo + */ 
+/* + PL:google_seo + */     if($link)
+/* + PL:google_seo + */     {
+/* + PL:google_seo + */         return $link;
+/* + PL:google_seo + */     }
+/* + PL:google_seo + */ }
 	if($page > 1)
 	{
 		if($action)
@@ -4792,6 +4891,15 @@ function get_thread_link($tid, $page=0, $action='')
  */
 function get_post_link($pid, $tid=0)
 {
+/* + PL:google_seo + */ if(function_exists("google_seo_url_post"))
+/* + PL:google_seo + */ {
+/* + PL:google_seo + */     $link = google_seo_url_post($pid, $tid);
+/* + PL:google_seo + */ 
+/* + PL:google_seo + */     if($link)
+/* + PL:google_seo + */     {
+/* + PL:google_seo + */         return $link;
+/* + PL:google_seo + */     }
+/* + PL:google_seo + */ }
 	if($tid > 0)
 	{
 		$link = str_replace("{tid}", $tid, THREAD_URL_POST);
@@ -4813,6 +4921,15 @@ function get_post_link($pid, $tid=0)
  */
 function get_event_link($eid)
 {
+/* + PL:google_seo + */ if(function_exists("google_seo_url_event"))
+/* + PL:google_seo + */ {
+/* + PL:google_seo + */     $link = google_seo_url_event($eid);
+/* + PL:google_seo + */ 
+/* + PL:google_seo + */     if($link)
+/* + PL:google_seo + */     {
+/* + PL:google_seo + */         return $link;
+/* + PL:google_seo + */     }
+/* + PL:google_seo + */ }
 	$link = str_replace("{eid}", $eid, EVENT_URL);
 	return htmlspecialchars_uni($link);
 }
@@ -4828,6 +4945,15 @@ function get_event_link($eid)
  */
 function get_calendar_link($calendar, $year=0, $month=0, $day=0)
 {
+/* + PL:google_seo + */ if(function_exists("google_seo_url_calendar"))
+/* + PL:google_seo + */ {
+/* + PL:google_seo + */     $link = google_seo_url_calendar($calendar, $year, $month, $day);
+/* + PL:google_seo + */ 
+/* + PL:google_seo + */     if($link)
+/* + PL:google_seo + */     {
+/* + PL:google_seo + */         return $link;
+/* + PL:google_seo + */     }
+/* + PL:google_seo + */ }
 	if($day > 0)
 	{
 		$link = str_replace("{month}", $month, CALENDAR_URL_DAY);
