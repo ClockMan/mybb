@@ -14,8 +14,9 @@ define('THIS_SCRIPT', 'member.php');
 define("ALLOWABLE_PAGE", "register,do_register,login,do_login,logout,lostpw,do_lostpw,activate,resendactivation,do_resendactivation,resetpassword");
 
 $nosession['avatar'] = 1;
-$templatelist = "member_register,error_nousername,error_nopassword,error_passwordmismatch,error_invalidemail,error_usernametaken,error_emailmismatch,error_noemail,redirect_registered,member_register_hiddencaptcha";
-$templatelist .= ",redirect_loggedout,login,redirect_loggedin,error_invalidusername,error_invalidpassword,member_profile_email,member_profile_offline,member_profile_reputation,member_profile_warn,member_profile_warninglevel,member_profile_customfields_field,member_profile_customfields,member_profile_adminoptions,member_profile,member_login,member_profile_online,member_profile_modoptions,member_profile_signature,member_profile_groupimage,member_profile_referrals";
+$templatelist = "member_register,member_register_hiddencaptcha,member_coppa_form,member_register_coppa,member_register_agreement_coppa,member_register_agreement,usercp_options_tppselect,usercp_options_pppselect,member_register_referrer,member_register_customfield,member_register_requiredfields,member_register_password,member_activate,member_resendactivation,member_lostpw";
+$templatelist .= ",member_resetpassword,member_loggedin_notice,member_profile_away,member_emailuser,member_register_regimage,member_register_regimage_recaptcha,post_captcha_hidden,post_captcha,post_captcha_recaptcha";
+$templatelist .= ",member_profile_email,member_profile_offline,member_profile_reputation,member_profile_warn,member_profile_warninglevel,member_profile_customfields_field,member_profile_customfields,member_profile_adminoptions,member_profile,member_login,member_profile_online,member_profile_modoptions,member_profile_signature,member_profile_groupimage,member_profile_referrals";
 require_once "./global.php";
 
 require_once MYBB_ROOT."inc/functions_post.php";
@@ -126,14 +127,10 @@ if($mybb->input['action'] == "do_register" && $mybb->request_method == "post")
 		"regip" => $session->ipaddress,
 		"longregip" => my_ip2long($session->ipaddress),
 		"coppa_user" => intval($mybb->cookies['coppauser']),
+		"regcheck1" => $mybb->input['regcheck1'],
+		"regcheck2" => $mybb->input['regcheck2']
 	);
 	
-	if(isset($mybb->input['regcheck1']) && isset($mybb->input['regcheck2']))
-	{
-		$user['regcheck1'] = $mybb->input['regcheck1'];
-		$user['regcheck2'] = $mybb->input['regcheck2'];
-	}
-
 	// Do we have a saved COPPA DOB?
 	if($mybb->cookies['coppadob'])
 	{
@@ -1113,8 +1110,8 @@ if($mybb->input['action'] == "resetpassword")
 	}
 }
 
-$do_captcha = $correct = false;
-$inline_errors = "";
+$correct = false;
+$inline_errors = '';
 if($mybb->input['action'] == "do_login" && $mybb->request_method == "post")
 {
 	$plugins->run_hooks("member_do_login_start");
@@ -1163,6 +1160,13 @@ if($mybb->input['action'] == "do_login" && $mybb->request_method == "post")
 		{
 			$do_captcha = false;
 
+	if($mybb->settings['failedcaptchalogincount'] > 0 && ($loginattempts > $mybb->settings['failedcaptchalogincount'] || intval($mybb->cookies['loginattempts']) > $mybb->settings['failedcaptchalogincount']))
+	{
+		// Show captcha image if enabled
+		if($mybb->settings['captchaimage'])
+		{
+			$do_captcha = false;
+
 			// Check their current captcha input - if correct, hide the captcha input area
 			require_once MYBB_ROOT.'inc/class_captcha.php';
 			$login_captcha = new captcha;
@@ -1171,7 +1175,7 @@ if($mybb->input['action'] == "do_login" && $mybb->request_method == "post")
 			{
 				$correct = true;
 				$do_captcha = true;
-
+				
 				// CAPTCHA validation failed
 				foreach($login_captcha->get_errors() as $error)
 				{
@@ -1298,39 +1302,58 @@ if($mybb->input['action'] == "login")
 	login_attempt_check();
 
 	// Redirect to the page where the user came from, but not if that was the login page.
+	$redirect_url = '';
 	if($_SERVER['HTTP_REFERER'] && strpos($_SERVER['HTTP_REFERER'], "action=login") === false)
 	{
 		$redirect_url = htmlentities($_SERVER['HTTP_REFERER']);
 	}
-	else
-	{
-		$redirect_url = '';
-	}
 
-	$captcha = "";
-	// Show captcha image for guests if enabled
-	if($mybb->settings['captchaimage'])
+	$captcha = '';
+	// Show captcha image for guests if enabled and only if we have to do
+	if($mybb->settings['captchaimage'] && isset($do_captcha))
 	{
+		$correct = false;
 		require_once MYBB_ROOT.'inc/class_captcha.php';
+		$login_captcha = new captcha(false, "post_captcha");
 
-		if($do_captcha == true)
+		if($do_captcha == false && $login_captcha->type == 1)
 		{
-			$login_captcha = new captcha(true, "post_captcha");
+			if($login_captcha->validate_captcha() == true)
+			{
+				$correct = true;
+				$captcha = $login_captcha->build_hidden_captcha();
+	}
+		}
+
+		if(!$correct)
+	{
+			if($login_captcha->type == 1)
+			{
+				$login_captcha->build_captcha();
+			}
+			elseif($login_captcha->type == 2)
+			{
+				$login_captcha->build_recaptcha();
+			}
 
 			if($login_captcha->html)
 			{
 				$captcha = $login_captcha->html;
 			}
 		}
-		else
+		elseif($correct && $login_captcha->type == 2)
 		{
-			$login_captcha = new captcha;
-			$captcha = $login_captcha->build_hidden_captcha();
+			$login_captcha->build_recaptcha();
+
+			if($login_captcha->html)
+			{
+				$captcha = $login_captcha->html;
+			}
 		}
 	}
 
-	$username = '';
-	$password = '';
+	$username = "";
+	$password = "";
 	if($mybb->input['username'] && $mybb->request_method == "post")
 	{
 		$username = htmlspecialchars_uni($mybb->input['username']);
@@ -1527,16 +1550,14 @@ if($mybb->input['action'] == "profile")
 		$bgcolors[$cat] = alt_trow();
 	}
 
+	$website = '';
 	if($memprofile['website'])
 	{
 		$memprofile['website'] = htmlspecialchars_uni($memprofile['website']);
 		$website = "<a href=\"{$memprofile['website']}\" target=\"_blank\">{$memprofile['website']}</a>";
 	}
-	else
-	{
-		$website = '';
-	}
 
+	$signature = '';
 	if($memprofile['signature'] && ($memprofile['suspendsignature'] == 0 || $memprofile['suspendsigtime'] < TIME_NOW))
 	{
 		$sig_parser = array(
@@ -1591,6 +1612,7 @@ if($mybb->input['action'] == "profile")
 		$memprofile['icq'] = '';
 	}
 
+	$awaybit = '';
 	if($memprofile['away'] == 1 && $mybb->settings['allowaway'] != 0)
 	{
 		$lang->away_note = $lang->sprintf($lang->away_note, $memprofile['username']);
@@ -1741,6 +1763,7 @@ if($mybb->input['action'] == "profile")
 	// Get the user title for this user
 	unset($usertitle);
 	unset($stars);
+	$starimage = '';
 	if(trim($memprofile['usertitle']) != '')
 	{
 		// User has custom user title
@@ -1799,6 +1822,7 @@ if($mybb->input['action'] == "profile")
 		}
 	}
 
+	$groupimage = '';
 	if(!empty($displaygroup['image']))
 	{
 		if(!empty($mybb->user['language']))
@@ -1814,12 +1838,12 @@ if($mybb->input['action'] == "profile")
 		eval("\$groupimage = \"".$templates->get("member_profile_groupimage")."\";");
 	}
 
-	if(!$starimage)
+	if(empty($starimage))
 	{
 		$starimage = $displaygroup['starimage'];
 	}
 
-	if($starimage)
+	if(!empty($starimage))
 	{
 		// Only display stars if we have an image to use...
 		$starimage = str_replace("{theme}", $theme['imgdir'], $starimage);
@@ -1873,6 +1897,7 @@ if($mybb->input['action'] == "profile")
 		$reputation = get_reputation($memprofile['reputation']);
 
 		// If this user has permission to give reputations show the vote link
+		$vote_link = '';
 		if($mybb->usergroup['cangivereputations'] == 1 && $memprofile['uid'] != $mybb->user['uid'])
 		{
 			$vote_link = "[<a href=\"javascript:MyBB.reputation({$memprofile['uid']});\">{$lang->reputation_vote}</a>]";
@@ -1897,7 +1922,8 @@ if($mybb->input['action'] == "profile")
 		}
 		else
 		{
-			$warning_link = "usercp.php";
+			$warn_user = '';
+			$warning_link = 'usercp.php';
 		}
 		eval("\$warning_level = \"".$templates->get("member_profile_warninglevel")."\";");
 	}
@@ -1922,7 +1948,11 @@ if($mybb->input['action'] == "profile")
 		$thing = explode("\n", $customfield['type'], "2");
 		$type = trim($thing[0]);
 
+		$customfieldval = '';
 		$field = "fid{$customfield['fid']}";
+
+		if(isset($userfields[$field]))
+		{
 		$useropts = explode("\n", $userfields[$field]);
 		$customfieldval = $comma = '';
 		if(is_array($useropts) && ($type == "multiselect" || $type == "checkbox"))
@@ -1952,6 +1982,7 @@ if($mybb->input['action'] == "profile")
 				$customfieldval = htmlspecialchars_uni($userfields[$field]);
 			}
 		}
+		}
 
 		$customfield['name'] = htmlspecialchars_uni($customfield['name']);
 		eval("\$customfields .= \"".$templates->get("member_profile_customfields_field")."\";");
@@ -1973,15 +2004,13 @@ if($mybb->input['action'] == "profile")
 		$timeonline = $lang->none_registered;
 	}
 	
+	$adminoptions = '';
 	if($mybb->usergroup['cancp'] == 1 && $mybb->config['hide_admin_links'] != 1)
 	{
 		eval("\$adminoptions = \"".$templates->get("member_profile_adminoptions")."\";");
 	}
-	else
-	{
-		$adminoptions = '';
-	}
 	
+	$modoptions = '';
 	if($mybb->usergroup['canmodcp'] == 1)
 	{
 		$memprofile['usernotes'] = nl2br(htmlspecialchars_uni($memprofile['usernotes']));
@@ -2000,13 +2029,8 @@ if($mybb->input['action'] == "profile")
 		
 		eval("\$modoptions = \"".$templates->get("member_profile_modoptions")."\";");
 	}
-	else
-	{
-		$modoptions = '';
-	}
 	
 	$buddy_options = '';
-	
 	if($mybb->user['uid'] != $memprofile['uid'] && $mybb->user['uid'] != 0)
 	{
 		$buddy_list = explode(',', $mybb->user['buddylist']);

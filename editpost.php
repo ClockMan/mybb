@@ -12,7 +12,7 @@
 define("IN_MYBB", 1);
 define('THIS_SCRIPT', 'editpost.php');
 
-$templatelist = "editpost,previewpost,redirect_postedited,loginbox,posticons,changeuserbox,attachment,posticons,codebuttons,smilieinsert,post_attachments_attachment_postinsert,post_attachments_attachment_mod_approve,post_attachments_attachment_unapproved,post_attachments_attachment_mod_unapprove,post_attachments_attachment,post_attachments_new,post_attachments,newthread_postpoll,editpost_disablesmilies,post_subscription_method,post_attachments_attachment_remove";
+$templatelist = "editpost,previewpost,loginbox,posticons,changeuserbox,codebuttons,smilieinsert,smilieinsert_getmore,post_attachments_attachment_postinsert,post_attachments_attachment_mod_approve,post_attachments_attachment_unapproved,post_attachments_attachment_mod_unapprove,post_attachments_attachment,post_attachments_new,post_attachments,newthread_postpoll,editpost_disablesmilies,post_subscription_method,post_attachments_attachment_remove,post_attachments_update,postbit_author_guest,error_attacherror,forumdisplay_password_wrongpass,forumdisplay_password";
 
 require_once "./global.php";
 require_once MYBB_ROOT."inc/functions_post.php";
@@ -117,7 +117,12 @@ if($mybb->input['action'] == "deletepost" && $mybb->request_method == "post")
 		{
 			error_no_permission();
 		}
+		// User can't delete unapproved post
+		if($post['visible'] == 0)
+		{
+			error_no_permission();
 	}
+}
 }
 else
 {
@@ -142,7 +147,12 @@ else
 			$lang->edit_time_limit = $lang->sprintf($lang->edit_time_limit, $mybb->settings['edittimelimit']);
 			error($lang->edit_time_limit);
 		}
+		// User can't edit unapproved post
+		if($post['visible'] == 0)
+		{
+			error_no_permission();
 	}
+}
 }
 
 // Check if this forum is password protected and we have a valid password
@@ -158,15 +168,7 @@ if(!$mybb->input['attachmentaid'] && ($mybb->input['newattachment'] || $mybb->in
 	// Verify incoming POST request
 	verify_post_check($mybb->input['my_post_key']);
 	
-	if($mybb->input['posthash'])
-	{
-		$posthash_query = "posthash='".$db->escape_string($mybb->input['posthash'])."' OR ";
-	}
-	else
-	{
-		$posthash_query = "";
-	}
-	$query = $db->simple_select("attachments", "COUNT(aid) as numattachs", "{$posthash_query}pid='{$pid}'");
+	$query = $db->simple_select("attachments", "COUNT(aid) as numattachs", "pid='{$pid}'");
 	$attachcount = $db->fetch_field($query, "numattachs");
 	
 	// If there's an attachment, check it and upload it
@@ -386,21 +388,11 @@ if(!$mybb->input['action'] || $mybb->input['action'] == "editpost")
 		eval("\$loginbox = \"".$templates->get("loginbox")."\";");
 	}
 
-	// Setup a unique posthash for attachment management
-	$posthash = htmlspecialchars_uni($post['posthash']);
-
 	$bgcolor = "trow1";
 	if($forumpermissions['canpostattachments'] != 0)
 	{ // Get a listing of the current attachments, if there are any
 		$attachcount = 0;
-		$posthash_query = '';
-
-		if($posthash)
-		{
-			$posthash_query = "posthash='".$db->escape_string($posthash)."' OR ";
-		}
-
-		$query = $db->simple_select("attachments", "*", "{$posthash_query}pid='{$pid}'");
+		$query = $db->simple_select("attachments", "*", "pid='{$pid}'");
 		$attachments = '';
 		while($attachment = $db->fetch_array($query))
 		{

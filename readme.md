@@ -4,9 +4,8 @@
 MyBB is a free and open source, community-based, forum software project.
 
 ### Unreleased Versions
-Stable and Feature branches may contain partially-commited features which are broken, incomplete or may never make it to public release. For these reasons, MyBB don't recommend using either of these branches as a live forum. They should be used for development purposes or previews only.
-
-MyBB do not support unreleased versions.
+Stable and Feature branches may contain partially-commited features which are broken, incomplete or may never make it to public release. For these reasons, it is not recommended that you use either of these branches as a live forum. They should be used for development purposes or previews only.
+MyBB does not support unreleased versions.
 
 ### Contribute
 Contributing to MyBB is easy:
